@@ -1,0 +1,122 @@
+#pragma kernel CSMain
+#pragma kernel Colllisions
+#pragma kernel Gridding
+
+//const float g = 0.1635f;
+
+//funzione del vento: tiene conto dell'altezza più vicina all'aria moltiplichiamo il valore della forza in base alla direzione del vento e l'altezza
+//F.xy=
+
+struct ParticleStruct
+{
+    float3 pos;
+    float3 vel;
+    float3 temp;
+    uint counts;
+};
+
+/*
+struct MeshProperties {
+    float4 color;
+};
+
+RWStructuredBuffer<MeshProperties> _Properties;
+*/
+
+RWTexture2D<uint> _grid;
+RWStructuredBuffer<ParticleStruct> _dataBuffer;
+
+
+//_dataBuffer[id.z].tiem id.z //così rimane sempre 1 siccome l'array ha solo un valore nel primo slot e tutti gli altri sono sempre 0
+
+//l'equazione: "1/x"
+//oppure y= x-1/-y ma è da perfezionare
+//oppure y= d(distanza dove comincia esserci forza) / sqr(x)  = y = d/sqr(x)
+
+//la grandezza della particella d'acqua sarà 0.2 quindi la formula è 0.005/x
+
+    // !!!IMPORTANTE!!!
+    //_________________
+
+//IMPORTANTE OTTIMIZZAZIONE DA NON DIMENTICARE
+//fare nello script c# 2 funzioni nell update() basate sul tempo, una da chiamare una dopo la prima funzione usate 
+//per predirre dove andranno le particelle nella griglia e quella dopo sarà per calcolare la 
+
+//si usa LateUpdate()
+    //_________________
+    // !!!IMPORTANTE!!!
+
+//attrito molecolare per rallentare la velocità formula: vel.x = vel.x - (vel.x/1000); così stabilizziamo la simulazione
+
+
+
+[numthreads(2,1,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    //gravità - funziona.
+    //_dataBuffer[id.x].vel.y = _dataBuffer[id.x].vel.y - 0.1962f;          //0.1635 è 9,81/50 50 è il numero di volte che viene eseguito il codice 50 frame
+    //_dataBuffer[id.x].pos.y = _dataBuffer[id.x].pos.y + (_dataBuffer[id.x].vel.y * 0.02f);
+}
+
+//vel.x * 0.005/x
+
+
+[numthreads(2,1,1)]
+void Colllisions (uint3 id : SV_DispatchThreadID, uint3 idg : SV_GroupID, uint idi : SV_GroupIndex, uint3 idx : SV_GroupThreadID)
+{
+    float3 distance;
+    uint x = id.x;
+    uint y = _dataBuffer[x].counts;
+    float2 xy = float2(x, y);
+    uint xx = _grid[xy];
+    
+    //block reduction
+
+    for(int a = -13; a<13; a++)  //that won't work... i think. i'm not sure, for() method for call collision in neighbour cells
+    {
+        /*
+        for(int b = ???; b<???, b++)
+        {
+            for(int c = ???; c<???, c++)
+            {
+
+            }
+        }*/
+        distance = _dataBuffer[1].pos - _dataBuffer[x].pos + 0.1;
+        //   1/x to add
+
+        _dataBuffer[x].vel = _dataBuffer[x].vel + 0.005/distance;
+    }
+    
+    //_dataBuffer[x].pos = _dataBuffer[x].pos + (_dataBuffer[x].vel * 0.02f);
+    
+    _dataBuffer[x].temp = distance;//debug
+
+
+    //resetta la griglia
+    for(int f = 0; f<16; f++)
+    {
+        xy = float2(x, f);
+        _grid[xy] = 0;
+    }
+    _dataBuffer[x].counts = 0;
+}
+
+
+[numthreads(2,1,1)]
+void Gridding (uint3 id : SV_DispatchThreadID, uint3 idg : SV_GroupThreadID)
+{
+    uint i = id.x;
+    uint x = uint(abs((_dataBuffer[i].pos.z*4*4)+(_dataBuffer[i].pos.y*4) + _dataBuffer[i].pos.x));  //divere il *4 dal rapporto tra griglia e popolazione //+i for thread detection?
+    uint y = _dataBuffer[x].counts;
+    float2 xy = float2(x, y);
+
+    if(_grid[xy]!= 0)
+    {
+        InterlockedAdd(_dataBuffer[x].counts, 1); 
+    }
+    
+    //abs()
+    _grid[xy] = i;
+
+}
