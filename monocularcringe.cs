@@ -1,45 +1,51 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 [HelpURL("https://discussions.unity.com/t/load-texture-from-gpu/210626")]
 [AddComponentMenu("V037/Water Component")]
 public class monocularcringe : MonoBehaviour
 {   
-    [Header ("Components")]
+    [Header ("--Components--")]
     [SerializeField] private ComputeShader shader;
     [SerializeField] private Material material;
     [SerializeField] private Transform water; 
     [SerializeField] private RenderTexture rend; 
 
-    [Header ("Conditions")]
-    [SerializeField] private bool startShader = false;
+    [Header ("--Conditions--")]
+    [SerializeField] private bool startShader;
+    [SerializeField] private bool renderShader; 
     [SerializeField] private bool debuhg_mode;
+    [SerializeField] private bool debuhg_show;
 
-    [Header ("Values")]
+    [Header ("--Values--")]
     [Range (0.0f, 1.0f)] [SerializeField] private float waterLevel;
-    [SerializeField] private Vector2Int gridSize;
     [SerializeField] private int forV;
     [SerializeField] private int computeThreads;
     [SerializeField] private float particlesScale = 0.2f;
-    
-    [Header ("Debug")]
     [SerializeField] private uint debuhg_population = 8;
-    [SerializeField] private int population = 0;
-    [SerializeField] private int debuhg_ThreadGroups;
+
+    [Header ("--Debug--")]
     [SerializeField] private Vector3[] Dparticles = new Vector3[1];
     [SerializeField] private Vector3[] DparticlesVelocity = new Vector3[1];
     [SerializeField] private Vector3[] DparticlesTemp = new Vector3[1];
     [SerializeField] private uint[] DparticlesCounts = new uint[1];
 
+    private Vector2Int gridSize;
     private Vector3[] particles = new Vector3[1];
     private Vector3[] particlesVelocity = new Vector3[1];
     private Vector3[] particlesTemp = new Vector3[1];
     private uint[] particlesCounts = new uint[1];
+    
+    private int population = 0;
+    private int debuhg_ThreadGroups;
 
-    [SerializeField] private int kernelHandle;
-    [SerializeField] private int kernelHandle1;
-    [SerializeField] private int kernelHandle2;
+    private int kernelHandle;
+    private int kernelHandle1;
+    private int kernelHandle2;
     
     private ComputeBuffer buff;     //buffer particle physics
     private ComputeBuffer meshPropertiesBuffer;
@@ -92,7 +98,7 @@ public class monocularcringe : MonoBehaviour
                 for(int z = 0; z<forV; z++)
                 {
                     particles[(Mathf.CeilToInt(x*forV*forV*waterLevel))+(y*forV)+z] = new Vector3(x*0.5f,y*0.5f,z*0.5f);
-                    properties[(Mathf.CeilToInt(x*forV*forV*waterLevel))+(y*forV)+z].color = Color.Lerp(Color.green, Color.blue, Random.value);;
+                    properties[(Mathf.CeilToInt(x*forV*forV*waterLevel))+(y*forV)+z].color = Color.Lerp(Color.yellow, Color.red, Random.value); //gree, blue
                 }
             }
         }
@@ -163,11 +169,15 @@ public class monocularcringe : MonoBehaviour
         particlesTemp = new Vector3[population];
         particlesCounts = new uint[population];
 
-        Dparticles = new Vector3[debuhg_population];
-        DparticlesVelocity = new Vector3[debuhg_population];
-        DparticlesTemp = new Vector3[debuhg_population];
-        DparticlesCounts = new uint[debuhg_population];
+        if(debuhg_mode)
+        {
+            Dparticles = new Vector3[debuhg_population];
+            DparticlesVelocity = new Vector3[debuhg_population];
+            DparticlesTemp = new Vector3[debuhg_population];
+            DparticlesCounts = new uint[debuhg_population];
+        }
 
+        gridSize = new Vector2Int(population,Mathf.CeilToInt(population*0.25f));
         rend = new RenderTexture(gridSize.x, gridSize.y, 0, RenderTextureFormat.RInt);
         rend.enableRandomWrite = true;
         rend.Create();
@@ -189,8 +199,10 @@ public class monocularcringe : MonoBehaviour
     private void Update() 
     {
         // We used to just be able to use `population` here, but it looks like a Unity update imposed a thread limit (65535) on my device.
-        
-        Graphics.DrawMeshInstancedIndirect(mesh, 0, material, bounds, argsBuffer);
+        if(renderShader)
+        {
+            Graphics.DrawMeshInstancedIndirect(mesh, 0, material, bounds, argsBuffer);
+        }
     }
 
     void FixedUpdate()
@@ -276,4 +288,50 @@ public class monocularcringe : MonoBehaviour
         }
         buff = null;
     }
+
+#if UNITY_EDITOR
+    [CustomEditor(typeof(monocularcringe))]
+    public class MyScriptEditor: Editor
+    {
+        public override void OnInspectorGUI() 
+        {
+            // Call normal GUI (displaying "a" and any other variables you might have)
+            base.OnInspectorGUI();
+
+            // Reference the variables in the script
+            monocularcringe script = (monocularcringe)target;
+
+            if (script.debuhg_show) 
+            {
+                // Ensure the label and the value are on the same line
+                EditorGUILayout.BeginHorizontal();
+
+                // A label that says "b" (change b to B if you want it uppercase like default) and restrict its length.
+                // You can change 50 to any other value
+                EditorGUILayout.LabelField("Thread Groups:", GUILayout.MaxWidth(100));
+                EditorGUILayout.LabelField(""+script.debuhg_ThreadGroups,GUILayout.MaxWidth(100));
+                // Show and save the value of b
+                EditorGUILayout.LabelField("",GUILayout.MaxWidth(10));
+                EditorGUILayout.LabelField("Kernels index",GUILayout.MaxWidth(100));
+
+                EditorGUILayout.LabelField("CsM: "+script.kernelHandle,GUILayout.MaxWidth(50));
+                EditorGUILayout.LabelField("Col: "+script.kernelHandle1,GUILayout.MaxWidth(50));
+                EditorGUILayout.LabelField("Gri: "+script.kernelHandle2,GUILayout.MaxWidth(50));
+                
+                //script.kernelHandle2 = EditorGUILayout.IntField(script.kernelHandle2, GUILayout.MaxWidth(50));
+
+                EditorGUILayout.EndHorizontal();
+                EditorGUILayout.BeginHorizontal();
+
+                EditorGUILayout.LabelField("Population:", GUILayout.MaxWidth(70));
+                EditorGUILayout.LabelField(""+script.population,GUILayout.MaxWidth(142));
+                EditorGUILayout.LabelField("Grid Size", GUILayout.MaxWidth(100));
+                EditorGUILayout.LabelField("x: "+script.gridSize.x,GUILayout.MaxWidth(100));
+                EditorGUILayout.LabelField("y: "+script.gridSize.y,GUILayout.MaxWidth(100));
+
+                EditorGUILayout.EndHorizontal();
+            }
+        }
+    }
+#endif
 }

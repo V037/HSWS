@@ -50,7 +50,7 @@ RWStructuredBuffer<ParticleStruct> _dataBuffer;
 
 
 
-[numthreads(2,1,1)]
+[numthreads(128,1,1)]
 void CSMain (uint3 id : SV_DispatchThreadID)
 {
     //gravità - funziona.
@@ -61,7 +61,7 @@ void CSMain (uint3 id : SV_DispatchThreadID)
 //vel.x * 0.005/x
 
 
-[numthreads(2,1,1)]
+[numthreads(128,1,1)]
 void Colllisions (uint3 id : SV_DispatchThreadID, uint3 idg : SV_GroupID, uint idi : SV_GroupIndex, uint3 idx : SV_GroupThreadID)
 {
     float3 distance;
@@ -88,7 +88,7 @@ void Colllisions (uint3 id : SV_DispatchThreadID, uint3 idg : SV_GroupID, uint i
         _dataBuffer[x].vel = _dataBuffer[x].vel + 0.005/distance;
     }
     
-    //_dataBuffer[x].pos = _dataBuffer[x].pos + (_dataBuffer[x].vel * 0.02f);
+    _dataBuffer[x].pos = _dataBuffer[x].pos + (_dataBuffer[x].vel * 0.02f);
     
     _dataBuffer[x].temp = distance;//debug
 
@@ -103,7 +103,7 @@ void Colllisions (uint3 id : SV_DispatchThreadID, uint3 idg : SV_GroupID, uint i
 }
 
 
-[numthreads(2,1,1)]
+[numthreads(128,1,1)]
 void Gridding (uint3 id : SV_DispatchThreadID, uint3 idg : SV_GroupThreadID)
 {
     uint i = id.x;
