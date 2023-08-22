@@ -16,7 +16,7 @@ public class monocularcringe : MonoBehaviour
     [SerializeField] private RenderTexture rend; 
 
     [Header ("--Conditions--")]
-    [SerializeField] private bool startShader;
+    [SerializeField] private bool runShader;
     [SerializeField] private bool renderShader; 
     [SerializeField] private bool debuhg_mode;
     [SerializeField] private bool debuhg_show;
@@ -98,7 +98,7 @@ public class monocularcringe : MonoBehaviour
                 for(int z = 0; z<forV; z++)
                 {
                     particles[(Mathf.CeilToInt(x*forV*forV*waterLevel))+(y*forV)+z] = new Vector3(x*0.5f,y*0.5f,z*0.5f);
-                    properties[(Mathf.CeilToInt(x*forV*forV*waterLevel))+(y*forV)+z].color = Color.Lerp(Color.yellow, Color.red, Random.value); //gree, blue
+                    properties[(Mathf.CeilToInt(x*forV*forV*waterLevel))+(y*forV)+z].color = Color.Lerp(Color.green, Color.blue, Random.value); //gree, blue
                 }
             }
         }
@@ -207,7 +207,7 @@ public class monocularcringe : MonoBehaviour
 
     void FixedUpdate()
     {   
-        if(startShader)
+        if(runShader)
         {
             RunShader();
             material.SetVector("_waterPosition",water.position);
