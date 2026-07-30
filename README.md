@@ -1,1 +1,1 @@
-heavily simplified water simulation runnin on gpu in real time
+"HEAVILY SIMPLIFIED WATER SIMULATION" runnin on gpu in real time
